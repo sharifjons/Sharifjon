@@ -1,0 +1,1665 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The kākāpō - Reading Comprehension</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --passage-bg: #f8f9fa;
+            --questions-bg: #ffffff;
+            --border-color: #e0e0e0;
+            --highlight-color: springgreen;
+            --header-bg: #F8F8F8;
+            --header-text: #333333;
+            --icon-color: black;
+            --telegram-blue: #0088CC;
+            --instagram-pink: #E4405F;
+            --sharifjon-violet: #6A0DAD;
+            --button-bg: #CC0000;
+            --button-hover: #A30000;
+            --correct-color: #28a745;
+            --incorrect-color: #dc3545;
+            --progress-complete: #28a745;
+            --progress-incomplete: #bdbdbd;
+            --timer-bg: #ffebee;
+            --timer-text: #d32f2f;
+            --footer-bg: #f5f5f5;
+            --divider-bg: #e0e0e0;
+            --divider-hover: #b0b0b0;
+            --grey-bg: #e0e0e0;
+            --box-border: #000000;
+            --number-color: #808080;
+        }
+
+        .night-mode {
+            --bg-color: #121212;
+            --text-color: #e0e0e0;
+            --passage-bg: #1e1e1e;
+            --questions-bg: #1e1e1e;
+            --border-color: #424242;
+            --highlight-color: #2E8B57;
+            --header-bg: #1a1a1a;
+            --header-text: #ffffff;
+            --icon-color: white;
+            --telegram-blue: #005f99;
+            --instagram-pink: #b2334b;
+            --sharifjon-violet: #4B0082;
+            --button-bg: #990000;
+            --button-hover: #7a0000;
+            --correct-color: #218838;
+            --incorrect-color: #c82333;
+            --progress-complete: #218838;
+            --progress-incomplete: #616161;
+            --timer-bg: #420000;
+            --timer-text: #ffcdd2;
+            --footer-bg: #121212;
+            --divider-bg: #616161;
+            --divider-hover: #888888;
+            --grey-bg: #424242;
+            --box-border: #666666;
+            --number-color: #a0a0a0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: background-color 0.3s, color 0.3s, fill 0.3s;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            background-color: var(--header-bg);
+            color: var(--header-text);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .social-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+
+        .social-link:hover {
+            transform: translateY(-1px);
+        }
+
+        .social-link i {
+            font-size: 1.2em;
+        }
+
+        .social-link.telegram {
+            background-color: var(--telegram-blue);
+        }
+        .social-link.telegram:hover {
+            background-color: #007bb5;
+        }
+
+        .social-link.instagram {
+            background-color: var(--instagram-pink);
+        }
+        .social-link.instagram:hover {
+            background-color: #d62976;
+        }
+
+        .social-link.sharifjon {
+            background-color: var(--sharifjon-violet);
+        }
+        .social-link.sharifjon:hover {
+            background-color: #5a0099;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .fullscreen-control {
+            background: none;
+            border: none;
+            color: var(--header-text);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fullscreen-control svg {
+            fill: var(--icon-color);
+            width: 20px;
+            height: 20px;
+        }
+
+        .fullscreen-control:hover {
+            background-color: rgba(0,0,0,0.1);
+        }
+        .night-mode .fullscreen-control:hover {
+            background-color: rgba(255,255,255,0.2);
+        }
+
+        .timer-container {
+            background-color: var(--timer-bg);
+            color: var(--timer-text);
+            padding: 8px 15px;
+            border-radius: 50px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .timer-controls {
+            display: flex;
+            gap: 8px;
+        }
+
+        .timer-controls button {
+            background: none;
+            border: none;
+            color: var(--timer-text);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .timer-controls button:hover {
+            background-color: rgba(0,0,0,0.1);
+        }
+        .night-mode .timer-controls button:hover {
+            background-color: rgba(255,255,255,0.2);
+        }
+
+        .mode-toggle {
+            background: none;
+            border: none;
+            color: var(--header-text);
+            cursor: pointer;
+            font-size: 20px;
+            padding: 6px;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mode-toggle:hover {
+            background-color: rgba(0,0,0,0.1);
+        }
+        .night-mode .mode-toggle:hover {
+            background-color: rgba(255,255,255,0.2);
+        }
+
+        main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .passage-container, .questions-container {
+            height: 100%;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .passage-container {
+            width: 50%;
+            background-color: var(--passage-bg);
+        }
+
+        .questions-container {
+            width: 50%;
+            background-color: var(--questions-bg);
+        }
+
+        #divider {
+            width: 5px;
+            background-color: var(--divider-bg);
+            cursor: col-resize;
+            transition: background-color 0.3s;
+        }
+
+        #divider:hover, #divider:focus {
+            background-color: var(--divider-hover);
+        }
+
+        #divider:focus {
+            outline: 2px solid var(--button-bg);
+        }
+
+        .fullscreen-toggle {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: var(--text-color);
+            cursor: pointer;
+            font-size: 18px;
+            padding: 5px;
+            border-radius: 50%;
+        }
+
+        .fullscreen-toggle:hover {
+            background-color: rgba(0,0,0,0.1);
+        }
+        .night-mode .fullscreen-toggle:hover {
+            background-color: rgba(255,255,255,0.2);
+        }
+
+        .passage-container.fullscreen, .questions-container.fullscreen {
+            width: 100%;
+            z-index: 10;
+        }
+
+        .fullscreen-toggle.fullscreen {
+            display: none;
+        }
+
+        .passage-container.fullscreen ~ #divider,
+        .passage-container.fullscreen ~ .questions-container,
+        .questions-container.fullscreen ~ #divider,
+        .questions-container.fullscreen ~ .passage-container {
+            display: none;
+        }
+
+        .passage-content {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .passage-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--text-color);
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border-color);
+            text-align: center;
+        }
+
+        .passage-epigraph {
+            font-style: italic;
+            font-size: 16px;
+            color: #757575;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .passage-text {
+            font-size: 17px;
+        }
+
+        .question-text {
+            font-size: 17px;
+            line-height: 1.8;
+        }
+
+        .passage-text p {
+            margin-bottom: 20px;
+            text-align: justify;
+            user-select: text;
+        }
+
+        .highlight {
+            background-color: var(--highlight-color);
+            cursor: pointer;
+            display: inline;
+        }
+
+        .highlight-tooltip {
+            position: absolute;
+            background-color: var(--hint-tooltip-bg, #333);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            z-index: 1000;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 25px 0 15px;
+            color: var(--text-color);
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .question-group {
+            margin-bottom: 30px;
+        }
+
+        .question {
+            margin-bottom: 25px;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: var(--passage-bg);
+            border-left: 4px solid var(--border-color);
+            position: relative;
+        }
+
+        .question-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: baseline;
+        }
+
+        .question-number {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            background-color: var(--progress-incomplete);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            margin-right: 10px;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .question.answered .question-number {
+            background-color: var(--progress-complete);
+        }
+
+        .options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .option {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .option input {
+            margin-right: 8px;
+        }
+
+        .fill-in-the-blank-container {
+            display: inline;
+            position: relative;
+            vertical-align: middle;
+        }
+
+        .fill-in-the-blank-box {
+            display: inline-block;
+            width: 150px;
+            height: 24px;
+            background-color: white;
+            color: var(--number-color);
+            border: 1px solid var(--box-border); /* Thinner black border */
+            border-radius: 6px; /* Rounded corners */
+            font-size: 14px; /* Smaller text */
+            text-align: center;
+            vertical-align: middle;
+            line-height: 24px;
+            font-weight: normal; /* Not bold */
+        }
+
+        .fill-in-the-blank {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: transparent;
+            text-align: center;
+            font-family: inherit;
+            font-size: 17px;
+            color: var(--text-color);
+            padding: 0;
+            margin: 0;
+            outline: none;
+            z-index: 1;
+            caret-color: transparent; /* Hidden by default */
+        }
+
+        .fill-in-the-blank-container:focus-within .fill-in-the-blank {
+            caret-color: var(--text-color); /* Show cursor when focused */
+        }
+
+        .fill-in-the-blank-container.answered .fill-in-the-blank-box {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .fill-in-the-blank-container.answered .fill-in-the-blank {
+            opacity: 1;
+        }
+
+        .fill-in-the-blank:focus {
+            caret-color: var(--text-color); /* Show cursor when focused */
+        }
+
+        .instructions {
+            font-size: 14px;
+            color: #757575;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        th, td {
+            border: none;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--passage-bg);
+            font-weight: 600;
+        }
+
+        td input {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .night-mode table th,
+        .night-mode table td,
+        .night-mode .question-text,
+        .night-mode .fill-in-the-blank {
+            color: #ffffff !important;
+        }
+
+        tr:nth-child(1) td {
+            background-color: var(--passage-bg); /* Lightened to match passage-bg */
+            font-weight: bold;
+            text-align: center;
+        }
+
+        tr:nth-child(5) td, tr:nth-child(9) td {
+            font-weight: bold;
+        }
+
+        footer {
+            background-color: var(--footer-bg);
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid var(--border-color);
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+        }
+
+        .progress-container {
+            display: flex;
+            gap: 8px;
+        }
+
+        .progress-item {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--progress-incomplete);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .progress-item:hover {
+            transform: scale(1.1);
+        }
+
+        .progress-item.completed {
+            background-color: var(--progress-complete);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+        }
+
+        .btn-primary {
+            background-color: var(--button-bg);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--button-hover);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            border: 1px solid var(--button-bg);
+            color: var(--button-bg);
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(204, 0, 0, 0.1);
+        }
+        .night-mode .btn-secondary:hover {
+            background-color: rgba(153, 0, 0, 0.2);
+        }
+
+        .feedback-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .feedback-container {
+            background-color: var(--passage-bg);
+            width: 90%;
+            max-width: 900px;
+            height: 90%;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .feedback-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .feedback-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #close-feedback {
+            font-size: 24px;
+            background: none;
+            border: none;
+            color: var(--text-color);
+            cursor: pointer;
+        }
+
+        .score-display {
+            font-size: 24px;
+            font-weight: 700;
+            margin-left: 10px;
+        }
+
+        .feedback-body {
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .feedback-item {
+            margin-bottom: 25px;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: var(--questions-bg);
+        }
+
+        .feedback-question {
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .feedback-answer {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            border-radius: 4px;
+            background-color: rgba(0,0,0,0.05);
+        }
+
+        .correct {
+            color: var(--correct-color);
+        }
+
+        .incorrect {
+            color: var(--incorrect-color);
+        }
+
+        .feedback-explanation {
+            margin-top: 10px;
+            padding: 10px;
+            border-left: 3px solid var(--button-bg);
+            background-color: rgba(0,0,0,0.03);
+        }
+
+        .feedback-passage {
+            margin-top: 8px;
+            font-style: italic;
+            color: #757575;
+        }
+
+        @media (max-width: 900px) {
+            main {
+                flex-direction: column;
+            }
+
+            .passage-container, .questions-container {
+                width: 100%;
+                height: 50%;
+            }
+
+            #divider {
+                display: none;
+            }
+
+            .fullscreen-toggle {
+                display: none;
+            }
+
+            .progress-container {
+                flex-wrap: wrap;
+                max-width: 60%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .logo-area {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 8px;
+            }
+            .social-link {
+                padding: 6px 10px;
+                font-size: 13px;
+            }
+            .social-link i {
+                font-size: 1.1em;
+            }
+            .social-link span {
+                display: inline;
+            }
+        }
+
+        @media (max-width: 600px) {
+            header {
+                flex-direction: column;
+                gap: 10px;
+                padding: 10px;
+            }
+            .header-controls {
+                width: 100%;
+                justify-content: space-around;
+            }
+            .progress-container {
+                max-width: 50%;
+            }
+            .progress-item {
+                width: 26px;
+                height: 26px;
+                font-size: 12px;
+            }
+            footer {
+                flex-direction: column;
+                gap: 15px;
+            }
+            .action-buttons {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo-area">
+            <a href="https://t.me/respect_academyuz" class="social-link telegram" target="_blank" title="Join on Telegram">
+                <i class="fab fa-telegram-plane"></i>
+                <span>Respect Academy</span>
+            </a>
+            <a href="https://www.instagram.com/respect.academyuz" class="social-link instagram" target="_blank" title="Follow on Instagram">
+                <i class="fab fa-instagram"></i>
+                <span>Respect Academy</span>
+            </a>
+            <a href="https://t.me/Sharifjons_Blog" class="social-link sharifjon" target="_blank" title="Join Sharifjon's IELTS">
+                <i class="fab fa-telegram-plane"></i>
+                <span>Sharifjon's IELTS</span>
+            </a>
+        </div>
+        <div class="header-controls">
+            <button id="fullscreen-toggle" class="fullscreen-control" title="Enter full screen" aria-label="Enter full screen">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrows-fullscreen" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707m4.344 0a.5.5 0 0 1 .707 0l4.096 4.096V11.5a.5.5 0 1 1 1 0v3.975a.5.5 0 0 1-.5.5H11.5a.5.5 0 0 1 0-1h2.768l-4.096-4.096a.5.5 0 0 1 0-.707m0-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707m-4.344 0a.5.5 0 0 1-.707 0L1.025 1.732V4.5a.5.5 0 0 1-1 0V.525a.5.5 0 0 1 .5-.5H4.5a.5.5 0 0 1 0 1H1.732l4.096 4.096a.5.5 0 0 1 0 .707"/>
+                </svg>
+            </button>
+            <div class="timer-container">
+                <i class="fas fa-clock"></i>
+                <span id="timer">20:00</span>
+                <div class="timer-controls">
+                    <button id="start-timer" title="Start" aria-label="Start timer"><i class="fas fa-play"></i></button>
+                    <button id="pause-timer" title="Pause" aria-label="Pause timer"><i class="fas fa-pause"></i></button>
+                    <button id="reset-timer" title="Reset" aria-label="Reset timer"><i class="fas fa-redo"></i></button>
+                </div>
+            </div>
+            <button class="mode-toggle" id="night-mode-toggle" title="Toggle Night Mode" aria-label="Toggle night mode">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <div class="passage-container" id="passage-container">
+            <button class="fullscreen-toggle" id="passage-fullscreen" title="Toggle full screen for passage" aria-label="Maximize passage">
+                <i class="fas fa-expand"></i>
+            </button>
+            <div class="passage-content">
+                <div class="passage-title">The kākāpō</div>
+                <div class="passage-epigraph">"The kākāpō is a nocturnal, flightless parrot that is critically endangered and one of New Zealand's unique treasures."</div>
+                <div class="passage-text" id="passage-text">
+                    <p>The kākāpō, also known as the owl parrot, is a large, forest-dwelling bird, with a pale owl-like face. Up to 64 cm in length, it has predominantly yellow-green feathers, forward-facing eyes, a large grey beak, large blue feet, and relatively short wings and tail. It is the world’s only flightless parrot, and is also possibly one of the world’s longest-living birds, with a reported lifespan of up to 100 years.</p>
+                    <p>Kākāpō are solitary birds and tend to occupy the same home range for many years. They forage on the ground and climb high into trees. They often leap from trees and flap their wings, but at best manage a controlled descent to the ground. They are entirely vegetarian, with their diet including the leaves, roots and bark of trees as well as bulbs, and fern fronds.</p>
+                    <p>Kākāpō breed in summer and autumn, but only in years when food is plentiful. Males play no part in incubation or chick-rearing – females alone incubate eggs and feed the chicks. The 1-4 eggs are laid in soil, which is repeatedly turned over before and during incubation. The female kākāpō has to spend long periods away from the nest searching for food, which leaves the unattended eggs and chicks particularly vulnerable to predators.</p>
+                    <p>Before humans arrived, kākāpō were common throughout New Zealand’s forests. However, this all changed with the arrival of the first Polynesian settlers about 700 years ago. For the early settlers, the flightless kākāpō was easy prey. They ate its meat and used its feathers to make soft cloaks. With them came the Polynesian dog and rat, which also preyed on kākāpō. By the time European colonisers arrived in the early 1800s, kākāpō had become confined to the central North Island and forested parts of the South Island. The fall in kākāpō numbers was accelerated by European colonisation. A great deal of habitat was lost through forest clearance, and introduced species such as deer depleted the remaining forests of food. Other predators such as cats, stoats and two more species of rat were also introduced. The kākāpō were in serious trouble.</p>
+                    <p>In 1894, the New Zealand government launched its first attempt to save the kākāpō. Conservationist Richard Henry led an effort to relocate several hundred of the birds to predator-free Resolution Island in Fiordland. Unfortunately, the island didn’t remain predator-free – stoats arrived within six years, eventually destroying the kākāpō population. By the mid-1900s, the kākāpō was practically a lost species. Only a few clung to life in the most isolated parts of New Zealand.</p>
+                    <p>From 1949 to 1973, the newly formed New Zealand Wildlife Service made over 60 expeditions to find kākāpō, focusing mainly on Fiordland. Six were caught, but there were no females amongst them and all but one died within a few months of captivity.</p>
+                    <p>In 1974, a new initiative was launched, and by 1977, 18 more kākāpō were found in Fiordland. However, there were still no females. In 1977, a large population of males was spotted in Rakiura – a large island free from stoats, ferrets and weasels. There were about 200 individuals, and in 1980 it was confirmed females were also present. These birds have been the foundation of all subsequent work in managing the species.</p>
+                    <p>Unfortunately, predation by feral cats on Rakiura Island led to a rapid decline in kākāpō numbers. As a result, during 1980-97, the surviving population was evacuated to three island sanctuaries: Codfish Island, Maud Island and Little Barrier Island. However, breeding success was hard to achieve. Rats were found to be a major predator of kākāpō chicks, and an insufficient number of chicks survived to offset adult mortality. By 1995, although at least 12 chicks had been produced on the islands, only three had survived. The kākāpō population had dropped to 51 birds.</p>
+                    <p>The critical situation prompted an urgent review of kākāpō management in New Zealand. In 1996, a new Recovery Plan was launched, together with a specialist advisory group called the Kākāpō Scientific and Technical Advisory Committee and a higher amount of funding. Renewed steps were taken to control predators on the three islands. Cats were eradicated from Little Barrier Island in 1980, and possums were eradicated from Codfish Island by 1986. However, the population did not start to increase until rats were removed from all three islands, and the birds were more intensively managed. This involved moving the birds between islands, supplementary feeding of adults, and rescuing and hand-raising any failing chicks.</p>
+                    <p>After the first five years of the Recovery Plan, the population was on target. By 2000, five new females had been produced, and the total population had grown to 62 birds. For the first time, there was cautious optimism for the future of kākāpō, and by June 2020, a total of 210 birds was recorded.</p>
+                    <p>Today, kākāpō management continues to be guided by the kākāpō Recovery Plan. Its key goals are: minimise the loss of genetic diversity in the kākāpō population, restore or maintain sufficient habitat to accommodate the expected increase in the kākāpō population, and ensure stakeholders continue to be fully engaged in the preservation of the species.</p>
+                </div>
+            </div>
+        </div>
+        <div id="divider" role="separator" aria-label="Resize passage and questions panels" tabindex="0"></div>
+        <div class="questions-container" id="questions-container">
+            <button class="fullscreen-toggle" id="questions-fullscreen" title="Toggle full screen for questions" aria-label="Maximize questions">
+                <i class="fas fa-expand"></i>
+            </button>
+            <div class="section-title">Questions 1-6</div>
+            <div class="instructions">Do the following statements agree with the information given in the reading passage? In boxes 1-6 on your answer sheet, write:</div>
+            <div class="question-group">
+                <div class="question" id="q1">
+                    <div class="question-title">
+                        <div class="question-number">1</div>
+                        <div class="question-text">There are other parrots that share the kākāpō's inability to fly.</div>
+                    </div>
+                    <div class="options">
+                        <label class="option">
+                            <input type="radio" name="q1" value="TRUE"> TRUE
+                        </label>
+                        <label class="option">
+                            <input type="radio" name="q1" value="FALSE"> FALSE
+                        </label>
+                        <label class="option">
+                            <input type="radio" name="q1" value="NOT GIVEN"> NOT GIVEN
+                        </label>
+                    </div>
+                </div>
+                <div class="question" id="q2">
+                    <div class="question-title">
+                        <div class="question-number">2</div>
+                        <div class="question-text">Adult kākāpō produce chicks every year.</div>
+                    </div>
+                    <div class="options">
+                        <label class="option">
+                            <input type="radio" name="q2" value="TRUE"> TRUE
+                        </label>
+                        <label class="option">
+                            <input type="radio" name="q2" value="FALSE"> FALSE
+                        </label>
+                        <label class="option">
+                            <input type="radio" name="q2" value="NOT GIVEN"> NOT GIVEN
+                        </label>
+                    </div>
+                </div>
+                <div class="question" id="q3">
+                    <div class="question-title">
+                        <div class="question-number">3</div>
+                        <div class="question-text">Adult male kākāpō bring food back to nesting females.</div>
+                    </div>
+                    <div class="options">
+                        <label class="option">
+                            <input type="radio" name="q3" value="TRUE"> TRUE
+                        </label>
+                        <label class="option">
+                            <input type="radio" name="q3" value="FALSE"> FALSE
+                        </label>
+                        <label class="option">
+                            <input type="radio" name="q3" value="NOT GIVEN"> NOT GIVEN
+                        </label>
+                    </div>
+                </div>
+                <div class="question" id="q4">
+                    <div class="question-title">
+                        <div class="question-number">4</div>
+                        <div class="question-text">The Polynesian rat was a greater threat to the kākāpō than Polynesian settlers.</div>
+                    </div>
+                    <div class="options">
+                        <label class="option">
+                            <input type="radio" name="q4" value="TRUE"> TRUE
+                        </label>
+                        <label class="option">
+                            <input type="radio" name="q4" value="FALSE"> FALSE
+                        </label>
+                        <label class="option">
+                            <input type="radio" name="q4" value="NOT GIVEN"> NOT GIVEN
+                        </label>
+                    </div>
+                </div>
+                <div class="question" id="q5">
+                    <div class="question-title">
+                        <div class="question-number">5</div>
+                        <div class="question-text">Kākāpō were transferred from Rakiura Island to other locations because they were at risk from feral cats.</div>
+                    </div>
+                    <div class="options">
+                        <label class="option">
+                            <input type="radio" name="q5" value="TRUE"> TRUE
+                        </label>
+                        <label class="option">
+                            <input type="radio" name="q5" value="FALSE"> FALSE
+                        </label>
+                        <label class="option">
+                            <input type="radio" name="q5" value="NOT GIVEN"> NOT GIVEN
+                        </label>
+                    </div>
+                </div>
+                <div class="question" id="q6">
+                    <div class="question-title">
+                        <div class="question-number">6</div>
+                        <div class="question-text">One Recovery Plan initiative that helped increase the kākāpō population size was caring for struggling young birds.</div>
+                    </div>
+                    <div class="options">
+                        <label class="option">
+                            <input type="radio" name="q6" value="TRUE"> TRUE
+                        </label>
+                        <label class="option">
+                            <input type="radio" name="q6" value="FALSE"> FALSE
+                        </label>
+                        <label class="option">
+                            <input type="radio" name="q6" value="NOT GIVEN"> NOT GIVEN
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="section-title">Questions 7-13</div>
+            <div class="instructions">Complete the table below. Choose NO MORE THAN TWO WORDS from the passage for each answer.</div>
+            <table>
+                <tr><td colspan="2" style="text-align: center; font-weight: bold;">New Zealand's kākāpō</td></tr>
+                <tr><td colspan="2"><strong>A type of parrot:</strong></td></tr>
+                <tr><td>Diet consists of fern fronds, various parts of a tree and <span class="fill-in-the-blank-container"><span class="fill-in-the-blank-box">7</span><input type="text" name="q7" class="fill-in-the-blank"></span>.</td><td></td></tr>
+                <tr><td>Nests are created in <span class="fill-in-the-blank-container"><span class="fill-in-the-blank-box">8</span><input type="text" name="q8" class="fill-in-the-blank"></span> where eggs are laid.</td><td></td></tr>
+                <tr><td colspan="2"><strong>Arrival of Polynesian settlers</strong></td></tr>
+                <tr><td>The <span class="fill-in-the-blank-container"><span class="fill-in-the-blank-box">9</span><input type="text" name="q9" class="fill-in-the-blank"></span> of the kākāpō were used to make clothes.</td><td></td></tr>
+                <tr><td colspan="2"><strong>Arrival of European colonisers</strong></td></tr>
+                <tr><td><span class="fill-in-the-blank-container"><span class="fill-in-the-blank-box">10</span><input type="text" name="q10" class="fill-in-the-blank"></span> were an animal which they introduced that ate the kākāpō's food sources.</td><td></td></tr>
+                <tr><td colspan="2"><strong>Protecting kākāpō</strong></td></tr>
+                <tr><td>A conservationist tried to protect the kākāpō.</td><td></td></tr>
+                <tr><td>A definite sighting of female kākāpō on Rakiura Island was reported in the year <span class="fill-in-the-blank-container"><span class="fill-in-the-blank-box">11</span><input type="text" name="q11" class="fill-in-the-blank"></span>.</td><td></td></tr>
+                <tr><td>The Recovery Plan included an increase in <span class="fill-in-the-blank-container"><span class="fill-in-the-blank-box">12</span><input type="text" name="q12" class="fill-in-the-blank"></span>.</td><td></td></tr>
+                <tr><td>A current goal of the Recovery Plan is to maintain the involvement of <span class="fill-in-the-blank-container"><span class="fill-in-the-blank-box">13</span><input type="text" name="q13" class="fill-in-the-blank"></span> in kākāpō protection.</td><td></td></tr>
+            </table>
+        </div>
+    </main>
+
+    <footer>
+        <div class="progress-container" id="progress-container"></div>
+        <div class="action-buttons">
+            <button class="btn-secondary" id="reset-btn" aria-label="Reset answers">Reset Answers</button>
+            <button class="btn-primary" id="submit-btn" aria-label="Submit answers">Submit Answers</button>
+        </div>
+    </footer>
+
+    <div class="feedback-overlay" id="feedback-overlay">
+        <div class="feedback-container" id="feedback-container">
+            <div class="feedback-header">
+                <div class="feedback-title">
+                    <i class="fas fa-chart-bar"></i> Your Results
+                    <span class="score-display" id="score-display">0/13</span>
+                </div>
+                <button id="close-feedback" title="Close" aria-label="Close feedback"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="feedback-body" id="feedback-body"></div>
+        </div>
+    </div>
+
+    <script>
+        // Timer functionality
+        let timerInterval;
+        let seconds = 1200; // 20 minutes
+        let timerRunning = false;
+
+        const timerDisplay = document.getElementById('timer');
+        const startTimer = document.getElementById('start-timer');
+        const pauseTimer = document.getElementById('pause-timer');
+        const resetTimer = document.getElementById('reset-timer');
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = (seconds % 60).toString().padStart(2, '0');
+            return `${mins}:${secs}`;
+        }
+
+        function updateTimer() {
+            timerDisplay.textContent = formatTime(seconds);
+            if (seconds <= 0) {
+                clearInterval(timerInterval);
+                timerRunning = false;
+                document.getElementById('submit-btn').click();
+            }
+        }
+
+        startTimer.addEventListener('click', () => {
+            if (!timerRunning) {
+                timerRunning = true;
+                timerInterval = setInterval(() => {
+                    seconds--;
+                    updateTimer();
+                }, 1000);
+            }
+        });
+
+        pauseTimer.addEventListener('click', () => {
+            if (timerRunning) {
+                clearInterval(timerInterval);
+                timerRunning = false;
+            }
+        });
+
+        resetTimer.addEventListener('click', () => {
+            clearInterval(timerInterval);
+            timerRunning = false;
+            seconds = 1200;
+            updateTimer();
+        });
+
+        // Night mode toggle
+        const nightModeToggle = document.getElementById('night-mode-toggle');
+        nightModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('night-mode');
+            const icon = nightModeToggle.querySelector('i');
+            if (document.body.classList.contains('night-mode')) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            }
+        });
+
+        // Browser full-screen toggle
+        const fullscreenToggle = document.getElementById('fullscreen-toggle');
+        fullscreenToggle.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.body.requestFullscreen().catch(err => console.error('Fullscreen error:', err));
+                fullscreenToggle.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-fullscreen-exit" viewBox="0 0 16 16">
+                        <path d="M5.5 0a.5.5 0 0 1 .5.5v4A1.5 1.5 0 0 1 4.5 6h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5m5 0a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 10 4.5v-4a.5.5 0 0 1 .5-.5M0 10.5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 6 11.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5m10 1a1.5 1.5 0 0 1 1.5-1.5h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0z"/>
+                    </svg>`;
+                fullscreenToggle.setAttribute('title', 'Exit full screen');
+                fullscreenToggle.setAttribute('aria-label', 'Exit full screen');
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        document.addEventListener('fullscreenchange', () => {
+            if (!document.fullscreenElement) {
+                fullscreenToggle.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrows-fullscreen" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707m4.344 0a.5.5 0 0 1 .707 0l4.096 4.096V11.5a.5.5 0 1 1 1 0v3.975a.5.5 0 0 1-.5.5H11.5a.5.5 0 0 1 0-1h2.768l-4.096-4.096a.5.5 0 0 1 0-.707m0-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707m-4.344 0a.5.5 0 0 1-.707 0L1.025 1.732V4.5a.5.5 0 0 1-1 0V.525a.5.5 0 0 1 .5-.5H4.5a.5.5 0 0 1 0 1H1.732l4.096 4.096a.5.5 0 0 1 0 .707"/>
+                    </svg>`;
+                fullscreenToggle.setAttribute('title', 'Enter full screen');
+                fullscreenToggle.setAttribute('aria-label', 'Enter full screen');
+            }
+        });
+
+        // Panel full-screen toggle (for passage/questions)
+        const passageFullscreen = document.getElementById('passage-fullscreen');
+        const questionsFullscreen = document.getElementById('questions-fullscreen');
+
+        passageFullscreen.addEventListener('click', () => {
+            const passage = document.getElementById('passage-container');
+            const questions = document.getElementById('questions-container');
+            if (passage.classList.contains('fullscreen')) {
+                passage.classList.remove('fullscreen');
+                questions.style.display = '';
+                document.getElementById('divider').style.display = '';
+                passage.style.width = '50%';
+                questions.style.width = '50%';
+                passageFullscreen.querySelector('i').classList.remove('fa-compress');
+                passageFullscreen.querySelector('i').classList.add('fa-expand');
+            } else {
+                passage.classList.add('fullscreen');
+                questions.style.display = 'none';
+                document.getElementById('divider').style.display = 'none';
+                passage.style.width = '100%';
+                passageFullscreen.querySelector('i').classList.remove('fa-expand');
+                passageFullscreen.querySelector('i').classList.add('fa-compress');
+            }
+        });
+
+        questionsFullscreen.addEventListener('click', () => {
+            const passage = document.getElementById('passage-container');
+            const questions = document.getElementById('questions-container');
+            if (questions.classList.contains('fullscreen')) {
+                questions.classList.remove('fullscreen');
+                passage.style.display = '';
+                document.getElementById('divider').style.display = '';
+                passage.style.width = '50%';
+                questions.style.width = '50%';
+                questionsFullscreen.querySelector('i').classList.remove('fa-compress');
+                questionsFullscreen.querySelector('i').classList.add('fa-expand');
+            } else {
+                questions.classList.add('fullscreen');
+                passage.style.display = 'none';
+                document.getElementById('divider').style.display = 'none';
+                questions.style.width = '100%';
+                questionsFullscreen.querySelector('i').classList.remove('fa-expand');
+                questionsFullscreen.querySelector('i').classList.add('fa-compress');
+            }
+        });
+
+        // Draggable divider functionality
+        const main = document.querySelector('main');
+        const passage = document.getElementById('passage-container');
+        const questions = document.getElementById('questions-container');
+        const divider = document.getElementById('divider');
+
+        let isDragging = false;
+
+        divider.addEventListener('mousedown', (e) => {
+            if (!passage.classList.contains('fullscreen') && !questions.classList.contains('fullscreen')) {
+                isDragging = true;
+                document.body.style.cursor = 'col-resize';
+                e.preventDefault();
+            }
+        });
+
+        divider.addEventListener('focus', () => {
+            divider.style.outline = '2px solid var(--button-bg)';
+        });
+
+        divider.addEventListener('blur', () => {
+            divider.style.outline = 'none';
+        });
+
+        divider.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                e.preventDefault();
+                if (passage.classList.contains('fullscreen') || questions.classList.contains('fullscreen')) return;
+                const mainRect = main.getBoundingClientRect();
+                let passageWidth = passage.offsetWidth;
+                let step = mainRect.width * 0.02;
+                let newPassageWidth = passageWidth + (e.key === 'ArrowRight' ? step : -step);
+                let min = mainRect.width * 0.2;
+                let max = mainRect.width * 0.8;
+                if (newPassageWidth < min) newPassageWidth = min;
+                if (newPassageWidth > max) newPassageWidth = max;
+                let passagePercent = (newPassageWidth / mainRect.width) * 100;
+                let questionsPercent = 100 - passagePercent;
+                passage.style.width = passagePercent + '%';
+                questions.style.width = questionsPercent + '%';
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            if (passage.classList.contains('fullscreen') || questions.classList.contains('fullscreen')) return;
+            const mainRect = main.getBoundingClientRect();
+            let offsetX = e.clientX - mainRect.left;
+            offsetX = offsetX - divider.offsetWidth / 2;
+            let min = mainRect.width * 0.2;
+            let max = mainRect.width * 0.8;
+            if (offsetX < min) offsetX = min;
+            if (offsetX > max) offsetX = max;
+            let passagePercent = (offsetX / mainRect.width) * 100;
+            let questionsPercent = 100 - passagePercent;
+            passage.style.width = passagePercent + '%';
+            questions.style.width = questionsPercent + '%';
+            window.getSelection().removeAllRanges();
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                document.body.style.cursor = '';
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            const mainRect = main.getBoundingClientRect();
+            let passageWidth = passage.offsetWidth;
+            let questionsWidth = questions.offsetWidth;
+            if (!passage.classList.contains('fullscreen') && !questions.classList.contains('fullscreen')) {
+                if (passageWidth < mainRect.width * 0.2 || questionsWidth < mainRect.width * 0.2) {
+                    passage.style.width = "50%";
+                    questions.style.width = "50%";
+                }
+            }
+        });
+
+        window.addEventListener('DOMContentLoaded', function() {
+            passage.style.width = '50%';
+            questions.style.width = '50%';
+        });
+
+        // Create progress indicators
+        const progressContainer = document.getElementById('progress-container');
+        for (let i = 1; i <= 13; i++) {
+            const progressItem = document.createElement('div');
+            progressItem.className = 'progress-item';
+            progressItem.textContent = i;
+            progressItem.dataset.question = i;
+            progressContainer.appendChild(progressItem);
+
+            progressItem.addEventListener('click', () => {
+                const questionElement = document.getElementById(`q${i}`);
+                if (questionElement) {
+                    questionElement.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    const tableRow = document.querySelector(`tr td strong:contains("${i}")`)?.parentElement;
+                    if (tableRow) {
+                        tableRow.scrollIntoView({ behavior: 'smooth' });
+                    }
+                }
+            });
+        }
+
+        // Text highlighting functionality with undo/redo
+        let highlightTooltip = null;
+        let undoStack = [];
+        let redoStack = [];
+
+        function saveState() {
+            const passageParagraphs = Array.from(document.querySelectorAll('#passage-text p')).map(p => p.innerHTML);
+            const questionsText = document.getElementById('questions-container').innerHTML;
+            undoStack.push({ paragraphs: passageParagraphs, questions: questionsText });
+            if (undoStack.length > 50) undoStack.shift();
+            redoStack = [];
+        }
+
+        function applyHighlight(range, paragraph) {
+            if (!range.toString().trim()) return false;
+            const span = document.createElement('span');
+            span.className = 'highlight';
+            try {
+                range.surroundContents(span);
+                paragraph.normalize();
+                return true;
+            } catch (e) {
+                console.warn('Cannot surround range, splitting selection');
+                return false;
+            }
+        }
+
+        function handleMouseUp(e) {
+            const container = e.currentTarget;
+            const selection = window.getSelection();
+            if (!selection.toString().trim() || !container.contains(selection.anchorNode)) {
+                if (highlightTooltip) {
+                    highlightTooltip.remove();
+                    highlightTooltip = null;
+                }
+                return;
+            }
+
+            const range = selection.getRangeAt(0);
+            const paragraphs = Array.from(document.querySelectorAll('#passage-text p'));
+            const affectedParagraphs = paragraphs.filter(p => range.intersectsNode(p));
+
+            if (affectedParagraphs.length === 0) {
+                selection.removeAllRanges();
+                return;
+            }
+
+            if (highlightTooltip) {
+                highlightTooltip.remove();
+                highlightTooltip = null;
+            }
+
+            const rect = range.getBoundingClientRect();
+            highlightTooltip = document.createElement('div');
+            highlightTooltip.className = 'highlight-tooltip';
+            highlightTooltip.innerHTML = '<i class="fas fa-highlighter"></i> Highlight';
+            highlightTooltip.style.position = 'fixed';
+            highlightTooltip.style.top = `${rect.top - 40}px`;
+            highlightTooltip.style.left = `${rect.left}px`;
+            document.body.appendChild(highlightTooltip);
+
+            highlightTooltip.addEventListener('click', () => {
+                saveState();
+                let success = false;
+
+                if (affectedParagraphs.length === 1) {
+                    success = applyHighlight(range, affectedParagraphs[0]);
+                } else {
+                    affectedParagraphs.forEach(paragraph => {
+                        const paragraphRange = document.createRange();
+                        const textNodes = Array.from(paragraph.childNodes).filter(node => node.nodeType === Node.TEXT_NODE || (node.nodeType === Node.ELEMENT_NODE && node.className === 'highlight'));
+                        if (textNodes.length === 0) return;
+
+                        const paragraphStart = range.startContainer === paragraph || paragraph.contains(range.startContainer) ? range.startOffset : 0;
+                        const paragraphEnd = range.endContainer === paragraph || paragraph.contains(range.endContainer) ? range.endOffset : -1;
+
+                        textNodes.forEach(node => {
+                            const nodeRange = document.createRange();
+                            nodeRange.selectNodeContents(node);
+                            if (paragraph.contains(range.startContainer) && node === range.startContainer) {
+                                nodeRange.setStart(node, paragraphStart);
+                            }
+                            if (paragraph.contains(range.endContainer) && node === range.endContainer) {
+                                nodeRange.setEnd(node, paragraphEnd);
+                            }
+                            if (nodeRange.toString().trim()) {
+                                success = applyHighlight(nodeRange, paragraph) || success;
+                            }
+                        });
+                    });
+                }
+
+                if (success) {
+                    selection.removeAllRanges();
+                    highlightTooltip.remove();
+                    highlightTooltip = null;
+                } else {
+                    highlightTooltip.remove();
+                    highlightTooltip = null;
+                    selection.removeAllRanges();
+                }
+            });
+        }
+
+        document.getElementById('passage-text').addEventListener('mouseup', handleMouseUp);
+        document.getElementById('questions-container').addEventListener('mouseup', handleMouseUp);
+
+        document.addEventListener('mousedown', (e) => {
+            if (highlightTooltip && !highlightTooltip.contains(e.target)) {
+                highlightTooltip.remove();
+                highlightTooltip = null;
+                window.getSelection().removeAllRanges();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                if (e.key === 'z' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (undoStack.length > 1) {
+                        redoStack.push({
+                            paragraphs: Array.from(document.querySelectorAll('#passage-text p')).map(p => p.innerHTML),
+                            questions: document.getElementById('questions-container').innerHTML
+                        });
+                        const previousState = undoStack.pop();
+                        const paragraphs = document.querySelectorAll('#passage-text p');
+                        paragraphs.forEach((p, i) => {
+                            p.innerHTML = previousState.paragraphs[i] || p.innerHTML;
+                            p.normalize();
+                        });
+                        document.getElementById('questions-container').innerHTML = previousState.questions;
+                        updateProgress();
+                    }
+                } else if (e.key === 'y') {
+                    e.preventDefault();
+                    if (redoStack.length > 0) {
+                        saveState();
+                        const nextState = redoStack.pop();
+                        const paragraphs = document.querySelectorAll('#passage-text p');
+                        paragraphs.forEach((p, i) => {
+                            p.innerHTML = nextState.paragraphs[i] || p.innerHTML;
+                            p.normalize();
+                        });
+                        document.getElementById('questions-container').innerHTML = nextState.questions;
+                        updateProgress();
+                    }
+                }
+            }
+        });
+
+        // Track answered questions
+        const questionsList = document.querySelectorAll('.question');
+        const progressItems = document.querySelectorAll('.progress-item');
+
+        function updateProgress() {
+            let answeredCount = 0;
+
+            questionsList.forEach((question, index) => {
+                const questionNumber = index + 1;
+                let answered = false;
+                const questionNumberElement = question.querySelector('.question-number');
+
+                if (questionNumber <= 6) {
+                    const selectedOption = question.querySelector('input:checked');
+                    answered = selectedOption !== null;
+                } else {
+                    const inputs = question.querySelectorAll('input[type="text"]');
+                    answered = Array.from(inputs).every(input => input.value.trim() !== '');
+                }
+
+                if (answered) {
+                    question.classList.add('answered');
+                    if (questionNumberElement) {
+                        questionNumberElement.style.backgroundColor = 'var(--progress-complete)';
+                    }
+                    progressItems[index].classList.add('completed');
+                    answeredCount++;
+                } else {
+                    question.classList.remove('answered');
+                    if (questionNumberElement) {
+                        questionNumberElement.style.backgroundColor = 'var(--progress-incomplete)';
+                    }
+                    progressItems[index].classList.remove('completed');
+                }
+            });
+
+            // Handle table questions 7-13
+            const tableInputs = document.querySelectorAll('table input[type="text"]');
+            tableInputs.forEach((input, index) => {
+                const questionNumber = index + 7;
+                const container = input.closest('.fill-in-the-blank-container');
+                const answered = input.value.trim() !== '';
+                const progressItem = progressItems[questionNumber - 1];
+                if (answered) {
+                    container.classList.add('answered');
+                    progressItem.classList.add('completed');
+                    answeredCount++;
+                } else {
+                    container.classList.remove('answered');
+                    progressItem.classList.remove('completed');
+                }
+            });
+
+            return answeredCount;
+        }
+
+        document.querySelectorAll('input[type="radio"], input[type="text"]').forEach(input => {
+            input.addEventListener('change', updateProgress);
+            input.addEventListener('input', updateProgress);
+        });
+
+        // Reset button
+        document.getElementById('reset-btn').addEventListener('click', () => {
+            document.querySelectorAll('input[type="radio"]').forEach(radio => {
+                radio.checked = false;
+            });
+
+            document.querySelectorAll('input[type="text"]').forEach(input => {
+                input.value = '';
+            });
+
+            document.querySelectorAll('.highlight').forEach(highlight => {
+                const parent = highlight.parentNode;
+                while (highlight.firstChild) {
+                    parent.insertBefore(highlight.firstChild, highlight);
+                }
+                parent.removeChild(highlight);
+                parent.normalize();
+            });
+
+            const passage = document.getElementById('passage-container');
+            const questions = document.getElementById('questions-container');
+            passage.style.width = '50%';
+            questions.style.width = '50%';
+            passage.classList.remove('fullscreen');
+            questions.classList.remove('fullscreen');
+            passage.style.display = '';
+            questions.style.display = '';
+            document.getElementById('divider').style.display = '';
+            document.getElementById('passage-fullscreen').querySelector('i').classList.remove('fa-compress');
+            document.getElementById('passage-fullscreen').querySelector('i').classList.add('fa-expand');
+            document.getElementById('questions-fullscreen').querySelector('i').classList.remove('fa-compress');
+            document.getElementById('questions-fullscreen').querySelector('i').classList.add('fa-expand');
+
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            }
+
+            undoStack = [{
+                paragraphs: Array.from(document.querySelectorAll('#passage-text p')).map(p => p.innerHTML),
+                questions: document.getElementById('questions-container').innerHTML
+            }];
+            redoStack = [];
+            updateProgress();
+            document.getElementById('feedback-overlay').style.display = 'none';
+        });
+
+        // Submit and Feedback functionality
+        const feedbackOverlay = document.getElementById('feedback-overlay');
+        const closeFeedbackBtn = document.getElementById('close-feedback');
+
+        document.getElementById('submit-btn').addEventListener('click', () => {
+            pauseTimer.click();
+
+            const answers = {
+                1: 'FALSE',
+                2: 'FALSE',
+                3: 'FALSE',
+                4: 'NOT GIVEN',
+                5: 'TRUE',
+                6: 'TRUE',
+                7: 'bulbs',
+                8: 'soil',
+                9: 'feathers',
+                10: 'deer',
+                11: '1980',
+                12: 'funding',
+                13: 'stakeholders'
+            };
+
+            const explanations = {
+                1: "The passage states that the kākāpō is 'the world’s only flightless parrot,' suggesting no other parrots share this trait.",
+                2: "The passage indicates kākāpō breed 'only in years when food is plentiful,' not every year.",
+                3: "The passage notes 'males play no part in incubation or chick-rearing,' implying they do not bring food to nesting females.",
+                4: "The passage mentions both settlers and rats as threats, but does not specify which was greater.",
+                5: "The passage states that 'predation by feral cats on Rakiura Island led to a rapid decline,' prompting transfer to other locations.",
+                6: "The passage mentions 'rescuing and hand-raising any failing chicks' as part of the Recovery Plan, which helped increase the population.",
+                7: "The passage lists the kākāpō diet as including 'leaves, roots and bark of trees as well as bulbs, and fern fronds.'",
+                8: "The passage states that 'the 1-4 eggs are laid in soil.'",
+                9: "The passage notes that settlers 'used its feathers to make soft cloaks.'",
+                10: "The passage mentions 'introduced species such as deer depleted the remaining forests of food.'",
+                11: "The passage confirms 'in 1980 it was confirmed females were also present' on Rakiura Island.",
+                12: "The passage states that the Recovery Plan included 'a higher amount of funding.'",
+                13: "The passage lists a goal to 'ensure stakeholders continue to be fully engaged in the preservation of the species.'"
+            };
+
+            const passageReferences = explanations; // Using explanations as passage references for simplicity
+
+            let correctCount = 0;
+            const feedbackBody = document.getElementById('feedback-body');
+            feedbackBody.innerHTML = '';
+
+            for (let i = 1; i <= 13; i++) {
+                let userAnswer = 'Not answered';
+                let isCorrect = false;
+                let questionHTML = '';
+                const feedbackItem = document.createElement('div');
+                feedbackItem.className = 'feedback-item';
+
+                if (i <= 6) {
+                    const selected = document.querySelector(`input[name="q${i}"]:checked`);
+                    userAnswer = selected ? selected.value : 'Not answered';
+                    isCorrect = userAnswer === answers[i];
+                    const questionDiv = document.querySelector(`#q${i} .question-text`);
+                    questionHTML = questionDiv ? questionDiv.textContent : `Question ${i} not found`;
+                } else {
+                    const input = document.querySelector(`input[name="q${i}"]`);
+                    userAnswer = input ? input.value.trim() : 'Not answered';
+                    isCorrect = userAnswer.toLowerCase() === answers[i].toLowerCase();
+
+                    if (input) {
+                        const row = input.closest('tr');
+                        if (row) {
+                            const rowClone = row.cloneNode(true);
+                            const inputs = rowClone.querySelectorAll('input');
+                            inputs.forEach(inp => {
+                                const strong = document.createElement('strong');
+                                const em = document.createElement('em');
+                                em.textContent = answers[i];
+                                strong.appendChild(em);
+                                inp.parentNode.replaceChild(strong, inp);
+                            });
+                            questionHTML = rowClone.innerHTML;
+                        } else {
+                            questionHTML = `Question ${i} not found`;
+                        }
+                    } else {
+                        questionHTML = `Question ${i} not found`;
+                    }
+                }
+
+                if (isCorrect) correctCount++;
+
+                feedbackItem.innerHTML = `
+                    <div class="feedback-question">
+                        <span class="${isCorrect ? 'correct' : 'incorrect'}">Question ${i}:</span>
+                        ${isCorrect ? `<i class="fas fa-check correct" style="margin-left: 5px;"></i>` : `<i class="fas fa-times incorrect" style="margin-left: 5px;"></i>`}
+                    </div>
+                    <p><em>${questionHTML}</em></p>
+                    <div class="feedback-answer">
+                        <strong>Your answer:</strong> ${userAnswer}<br>
+                        ${!isCorrect ? `<strong>Correct answer:</strong> ${answers[i]}` : ''}
+                    </div>
+                    <div class="feedback-explanation">
+                        <strong>Explanation:</strong> ${explanations[i]}
+                    </div>
+                    <div class="feedback-passage">
+                        <strong>Relevant passage:</strong> "${passageReferences[i]}"
+                    </div>
+                `;
+
+                feedbackBody.appendChild(feedbackItem);
+            }
+
+            document.getElementById('score-display').textContent = `${correctCount}/13`;
+            feedbackOverlay.style.display = 'flex';
+        });
+
+        closeFeedbackBtn.addEventListener('click', () => {
+            feedbackOverlay.style.display = 'none';
+        });
+
+        feedbackOverlay.addEventListener('click', (e) => {
+            if (e.target === feedbackOverlay) {
+                feedbackOverlay.style.display = 'none';
+            }
+        });
+
+        // Initialize timer display and progress
+        updateTimer();
+        updateProgress();
+        // Initial state for undo/redo
+        undoStack = [{
+            paragraphs: Array.from(document.querySelectorAll('#passage-text p')).map(p => p.innerHTML),
+            questions: document.getElementById('questions-container').innerHTML
+        }];
+    </script>
+</body>
+</html>
